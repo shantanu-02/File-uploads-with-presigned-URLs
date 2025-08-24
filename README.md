@@ -58,8 +58,8 @@ npm run preview
 ```
 
 
+## 🚀 How to upload the file and get presigned URL
 ```
-## How to do upload the file and get prsigned URL
 1. Create an Issue
 2. Open an issue from the dashboard("/")
 3. Upload the file using the upload button

@@ -57,6 +57,16 @@ npm run build
 npm run preview
 ```
 
+
+```
+## How to do upload the file and get prsigned URL
+1. Create an Issue
+2. Open an issue from the dashboard("/")
+3. Upload the file using the upload button
+4. Click on uplaod
+5. See the develoepr console in browser for logs about your file
+6. You can copy the presigned URL usingthe button available
+```
 ## 🏗️ Project Structure
 
 ```

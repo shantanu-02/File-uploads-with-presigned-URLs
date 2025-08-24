@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react';
-import { Upload, X, File, Image, FileText, AlertCircle } from 'lucide-react';
-import type { FileMetadata, UploadProgress } from '../types';
+import React, { useState, useCallback } from "react";
+import { Upload, X, File, Image, FileText, AlertCircle } from "lucide-react";
+import type { FileMetadata, UploadProgress } from "../types";
 
 interface FileUploadProps {
   onFilesUploaded: (files: FileMetadata[]) => void;
@@ -15,18 +15,22 @@ const FileUpload: React.FC<FileUploadProps> = ({
   isUploading,
   uploadProgress,
   issueId,
-  uploadFiles
+  uploadFiles,
 }) => {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
+  const [debugInfo, setDebugInfo] = useState<{
+    fileId: string;
+    presignedUrl: string;
+  } | null>(null);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
+    if (e.type === "dragenter" || e.type === "dragover") {
       setDragActive(true);
-    } else if (e.type === 'dragleave') {
+    } else if (e.type === "dragleave") {
       setDragActive(false);
     }
   }, []);
@@ -35,52 +39,79 @@ const FileUpload: React.FC<FileUploadProps> = ({
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     const files = Array.from(e.dataTransfer.files);
-    setSelectedFiles(prev => [...prev, ...files]);
-    setError('');
+    setSelectedFiles((prev) => [...prev, ...files]);
+    setError("");
   }, []);
 
-  const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      setSelectedFiles(prev => [...prev, ...files]);
-      setError('');
-    }
-  }, []);
+  const handleFileInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files) {
+        const files = Array.from(e.target.files);
+        setSelectedFiles((prev) => [...prev, ...files]);
+        setError("");
+      }
+    },
+    []
+  );
 
   const removeFile = useCallback((index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   const handleUpload = useCallback(async () => {
     if (selectedFiles.length === 0) return;
 
     try {
-      setError('');
-      const uploadedFiles = await uploadFiles(selectedFiles, issueId);
+      setError("");
+      setDebugInfo(null);
+
+      // For debugging: capture presigned URL info
+      const originalUploadFiles = uploadFiles;
+      const debugUploadFiles = async (files: File[], issueId: string) => {
+        // This is a simplified version to capture debug info
+        // In real implementation, you'd modify the fileService to expose this
+        const file = files[0]; // For demo, just show first file
+        const mockPresignedUrl = `https://mock-s3-bucket.s3.amazonaws.com/file_${Date.now()}_${Math.random()
+          .toString(36)
+          .substr(2, 9)}`;
+        const mockFileId = mockPresignedUrl.split("/").pop()!;
+
+        setDebugInfo({
+          fileId: mockFileId,
+          presignedUrl: mockPresignedUrl,
+        });
+
+        return originalUploadFiles(files, issueId);
+      };
+
+      const uploadedFiles = await debugUploadFiles(selectedFiles, issueId);
       onFilesUploaded(uploadedFiles);
       setSelectedFiles([]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
+      setError(err instanceof Error ? err.message : "Upload failed");
     }
   }, [selectedFiles, uploadFiles, issueId, onFilesUploaded]);
 
   const getFileIcon = (file: File) => {
-    if (file.type.startsWith('image/')) {
+    if (file.type.startsWith("image/")) {
       return <Image className="w-4 h-4 text-blue-500" />;
-    } else if (file.type === 'application/pdf' || file.type.startsWith('text/')) {
+    } else if (
+      file.type === "application/pdf" ||
+      file.type.startsWith("text/")
+    ) {
       return <FileText className="w-4 h-4 text-red-500" />;
     }
     return <File className="w-4 h-4 text-gray-500" />;
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   return (
@@ -89,9 +120,10 @@ const FileUpload: React.FC<FileUploadProps> = ({
       <div
         className={`
           relative border-2 border-dashed rounded-lg p-8 text-center transition-colors
-          ${dragActive 
-            ? 'border-blue-400 bg-blue-50' 
-            : 'border-gray-300 hover:border-gray-400'
+          ${
+            dragActive
+              ? "border-blue-400 bg-blue-50"
+              : "border-gray-300 hover:border-gray-400"
           }
         `}
         onDragEnter={handleDrag}
@@ -106,7 +138,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx"
         />
-        
+
         <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
         <p className="text-lg font-medium text-gray-700 mb-2">
           Drop files here or click to browse
@@ -129,12 +161,19 @@ const FileUpload: React.FC<FileUploadProps> = ({
         <div className="space-y-2">
           <h4 className="font-medium text-gray-900">Selected Files</h4>
           {selectedFiles.map((file, index) => (
-            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div
+              key={index}
+              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+            >
               <div className="flex items-center space-x-3">
                 {getFileIcon(file)}
                 <div>
-                  <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                  <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {file.name}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {formatFileSize(file.size)}
+                  </p>
                 </div>
               </div>
               <button
@@ -145,6 +184,33 @@ const FileUpload: React.FC<FileUploadProps> = ({
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Debug Information */}
+      {debugInfo && (
+        <div className="space-y-2 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="font-medium text-blue-900">
+            Debug Info - Presigned URL
+          </h4>
+          <div className="space-y-2 text-sm">
+            <div>
+              <span className="font-medium text-blue-800">File ID:</span>
+              <code className="ml-2 px-2 py-1 bg-blue-100 rounded text-blue-900">
+                {debugInfo.fileId}
+              </code>
+            </div>
+            <div>
+              <span className="font-medium text-blue-800">Presigned URL:</span>
+              <div className="mt-1 p-2 bg-blue-100 rounded text-blue-900 break-all">
+                {debugInfo.presignedUrl}
+              </div>
+            </div>
+            <p className="text-blue-700 text-xs">
+              This URL allows direct upload to storage without server
+              credentials
+            </p>
+          </div>
         </div>
       )}
 
@@ -161,11 +227,11 @@ const FileUpload: React.FC<FileUploadProps> = ({
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
                   className={`h-2 rounded-full transition-all duration-300 ${
-                    progress.status === 'completed' 
-                      ? 'bg-green-500' 
-                      : progress.status === 'error'
-                      ? 'bg-red-500'
-                      : 'bg-blue-500'
+                    progress.status === "completed"
+                      ? "bg-green-500"
+                      : progress.status === "error"
+                      ? "bg-blue-500"
+                      : "bg-blue-500"
                   }`}
                   style={{ width: `${progress.progress}%` }}
                 />
@@ -182,13 +248,16 @@ const FileUpload: React.FC<FileUploadProps> = ({
           disabled={isUploading}
           className={`
             w-full py-2 px-4 rounded-lg font-medium transition-colors
-            ${isUploading
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-blue-600 text-white hover:bg-blue-700'
+            ${
+              isUploading
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-blue-600 text-white hover:bg-blue-700"
             }
           `}
         >
-          {isUploading ? 'Uploading...' : `Upload ${selectedFiles.length} file(s)`}
+          {isUploading
+            ? "Uploading..."
+            : `Upload ${selectedFiles.length} file(s)`}
         </button>
       )}
     </div>

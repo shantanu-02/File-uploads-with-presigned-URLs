@@ -1,5 +1,9 @@
-import type { FileMetadata, PresignedUrlResponse, UploadProgress } from '../types';
-import { mockS3Service } from './mockS3Service';
+import type {
+  FileMetadata,
+  PresignedUrlResponse,
+  UploadProgress,
+} from "../types";
+import { mockS3Service } from "./mockS3Service";
 
 class FileService {
   private fileMetadata = new Map<string, FileMetadata>();
@@ -17,6 +21,11 @@ class FileService {
         file.size
       );
 
+      // Log presigned URL for debugging
+      console.log("🔗 Generated Presigned URL:", presignedResponse.uploadUrl);
+      console.log("🆔 File ID:", presignedResponse.fileId);
+      console.log("⏰ Expires at:", presignedResponse.expiresAt);
+
       const fileMetadata: FileMetadata = {
         id: presignedResponse.fileId,
         filename: presignedResponse.fileId,
@@ -25,14 +34,14 @@ class FileService {
         contentType: file.type,
         uploadedAt: new Date(),
         url: mockS3Service.getFileUrl(presignedResponse.fileId),
-        issueId
+        issueId,
       };
 
       // Update progress to uploading
       onProgress?.({
         fileId: presignedResponse.fileId,
         progress: 0,
-        status: 'uploading'
+        status: "uploading",
       });
 
       // Upload file directly to mock S3
@@ -43,7 +52,7 @@ class FileService {
           onProgress?.({
             fileId: presignedResponse.fileId,
             progress,
-            status: 'uploading'
+            status: "uploading",
           });
         }
       );
@@ -55,16 +64,16 @@ class FileService {
       onProgress?.({
         fileId: presignedResponse.fileId,
         progress: 100,
-        status: 'completed'
+        status: "completed",
       });
 
       return fileMetadata;
     } catch (error) {
       onProgress?.({
-        fileId: 'unknown',
+        fileId: "unknown",
         progress: 0,
-        status: 'error',
-        error: error instanceof Error ? error.message : 'Upload failed'
+        status: "error",
+        error: error instanceof Error ? error.message : "Upload failed",
       });
       throw error;
     }
@@ -76,7 +85,7 @@ class FileService {
 
   getAllFilesByIssue(issueId: string): FileMetadata[] {
     return Array.from(this.fileMetadata.values()).filter(
-      file => file.issueId === issueId
+      (file) => file.issueId === issueId
     );
   }
 
@@ -90,16 +99,16 @@ class FileService {
 
   isValidFileType(file: File): boolean {
     const allowedTypes = [
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'image/webp',
-      'application/pdf',
-      'text/plain',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "application/pdf",
+      "text/plain",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ];
     return allowedTypes.includes(file.type);
   }
